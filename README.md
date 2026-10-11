@@ -1,4 +1,4 @@
-# Spec-Driven Development
+# Spec Driven Development
 
 - `specs/<name>/spec.md` - каждая спецификация в отдельной папке с именем без нумерации.
 - [templates/spec.md](templates/spec.md) - шаблон спецификации.
