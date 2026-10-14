@@ -1,0 +1,55 @@
+@startuml seq-01-activation
+title Сценарий 1. Активация плагина модератором
+
+autonumber
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowFontSize 12
+skinparam responseMessageBelowArrow true
+
+actor "Модератор" as mod
+
+box "OpenVidu" #EAF2FB
+  participant "Meet\nFrontend" as fe
+  participant "Meet\nBackend" as mb
+end box
+
+box "Adapters" #EEF7EE
+  participant "UI\nAdapter" as ui
+  participant "Call\nAdapter" as ca
+  participant "Media\nAdapter" as ma
+end box
+
+box "Core" #DDEFDD
+  participant "Plugin\nRegistry" as reg
+  participant "Plugin\nManager" as pm
+  database "Activation\nStore" as store
+end box
+
+box "Plugin" #FBF3E6
+  participant "Plugin\nBackend" as pb
+end box
+
+mod -> fe : запустить плагин
+fe -> ui : Plugin UI API
+ui -> pm : PluginControl: activate(pluginId, config)
+pm -> reg : Registry API: манифест
+pm -> pm : проверка прав
+pm -> store : активация: ACTIVATING
+pm --> ui : activationId
+
+== Асинхронно, звонок не ждёт ==
+
+pm -> pb : Control Endpoint: activate
+pb --> pm : ready
+pm -> ma : MediaControl: createRoute
+ma -> ma : подписка на треки\nв LiveKit (WebRTC)
+pm -> store : RUNNING
+
+pm -> ca : CallPort: plugin.activated
+ca -> mb : Meet API: сигнал всем участникам
+mb -> fe : сигнал (LiveKit sendData)
+fe -> ui : Plugin UI API
+ui -> ui : показать PluginSurface
+
+@enduml
