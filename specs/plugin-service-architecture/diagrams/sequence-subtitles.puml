@@ -1,0 +1,56 @@
+@startuml seq-e2e-subtitles
+title Сквозной путь: речь участника → субтитры на экране
+
+autonumber
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowFontSize 12
+skinparam responseMessageBelowArrow true
+
+actor "Участник A\n(говорит)" as a
+actor "Участник B\n(читает)" as b
+
+box "OpenVidu" #EAF2FB
+  participant "Meet\nFrontend (B)" as fe
+  participant "LiveKit\n(SFU)" as lk
+  participant "Meet\nBackend" as mb
+end box
+
+box "Adapters" #EEF7EE
+  participant "UI\nAdapter (B)" as ui
+  participant "Call\nAdapter" as ca
+  participant "Media\nAdapter" as ma
+end box
+
+box "Core" #DDEFDD
+  participant "Plugin\nManager" as pm
+  participant "Result\nGateway" as rg
+end box
+
+box "Plugin" #FBF3E6
+  participant "Plugin\nBackend" as pb
+end box
+
+a -> lk : голос (аудиотрек, WebRTC)
+lk -> fe : аудио A — основной поток,\nплагин его не задерживает
+
+== Медиа: параллельная ветвь ==
+
+lk -> ma : WebRTC: копия аудиотрека
+ma -> pm : MediaControl: аудиофрагменты A
+pm -> pb : Media Input: аудио A
+pb -> pb : распознавание речи\n(очередь участника A)
+
+== Результат ==
+
+pb -> rg : Plugin API: result.subtitles\n(текст, адресаты)
+rg -> pm : результат
+pm -> pm : проверка прав\nи адресатов
+pm -> ca : CallPort: доставить адресатам
+ca -> mb : Meet API: сигнал для B
+mb -> lk : RoomService API: sendData
+lk -> fe : data packet
+fe -> ui : Plugin UI API
+ui -> b : субтитры A на экране
+
+@enduml

@@ -1,0 +1,134 @@
+@startuml components
+top to bottom direction
+' skinparam linetype polyline
+' skinparam linetype ortho
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam nodesep 40
+skinparam ranksep 35
+skinparam ArrowFontSize 11
+skinparam InterfaceFontSize 11
+
+
+package "Платформа звонков\n(OpenVidu)" #EAF2FB {
+  component "OpenVidu Meet Frontend" as callUI
+  component "OpenVidu Meet Backend" as meetBackend
+  component "LiveKit Server\n(SFU)" as sfu
+
+  interface "Meet API" as iMeetApi
+  interface "RoomService\nAPI" as iRoomService
+  interface "WebRTC" as iRtc
+  interface "LiveKit\nWebhooks" as iWebhooks
+}
+
+package "Plugin Platform" #DDEFDD {
+  package "Adapters (OpenVidu)" #EEF7EE {
+    interface "Plugin UI API" as iPluginUiApi
+    component "UI Adapter" as uiAdapter {
+      component "Plugin Panel" as pluginPanel
+      component "Network Monitor" as netMonitor
+      component "PluginSurface" as pluginSurface
+    }
+    component "Call Adapter" as callAdapter
+    component "Media Adapter" as mediaAdapter
+    component "Event Adapter" as eventAdapter
+  }
+
+  package "Core" #DDEFDD {
+    interface "Registry API" as iRegistryApi
+    interface "PluginControl" as iPluginControl
+    interface "CallPort" as iCallPort
+    interface "MediaControl" as iMediaControl
+    interface "CallEvents" as iCallEvents
+
+    component "Plugin Registry" as registry
+    component "Plugin Manager" as pluginManager
+    component "Result Gateway" as resultGateway
+    database "Activation Store" as activationStore
+
+    interface "Plugin API" as iPluginApi
+  }
+}
+
+package "Plugin" #FBF3E6 {
+  interface "Plugin Surface API" as iSurfaceApi
+  interface "Control Endpoint" as iControl
+  interface "Media Input" as iMediaInput
+  interface "Plugin HTTP API" as iPluginHttp
+
+  component "Plugin Backend" as pluginBackend
+  component "Plugin UI" as pluginUI
+}
+
+' ===== Платформа звонков
+meetBackend -down- iMeetApi
+sfu -down- iRoomService
+sfu -down- iRtc
+sfu -down- iWebhooks
+
+callUI ..> iMeetApi
+callUI ..> iRtc
+meetBackend ..> iRoomService
+
+' ===== Клиент звонка встраивает плагины через UI Adapter
+uiAdapter -up- iPluginUiApi
+callUI .down.> iPluginUiApi
+
+' ===== Адаптеры используют API платформы звонков
+callAdapter .up.> iMeetApi
+mediaAdapter .up.> iRtc
+eventAdapter .up.> iWebhooks
+
+' ===== Порты ядра: предоставляемые (ядро вызывают)
+iRegistryApi ---- registry
+iPluginControl --- pluginManager
+iCallPort --- pluginManager
+iCallEvents --- pluginManager
+pluginPanel .down.> iRegistryApi
+pluginPanel .down.> iPluginControl
+netMonitor .down.> iPluginControl
+callAdapter .down.> iCallPort
+eventAdapter .down.> iCallEvents
+
+' ===== Порты ядра: требуемые (реализуют адаптеры)
+mediaAdapter -down- iMediaControl
+iMediaControl <... pluginManager
+
+' ===== Внутри ядра
+iRegistryApi <... pluginManager
+pluginManager ---> activationStore
+resultGateway -right-> pluginManager : \n
+
+' ===== Граница платформа <-> плагин
+pluginSurface -down- iSurfaceApi
+pluginUI .up.> iSurfaceApi
+
+resultGateway --- iPluginApi
+pluginBackend .up.> iPluginApi
+
+pluginBackend -up- iControl
+pluginBackend -up- iMediaInput
+pluginManager .down.> iControl
+pluginManager .down.> iMediaInput
+
+' ===== Внутри плагина
+pluginBackend -right- iPluginHttp
+pluginUI .left.> iPluginHttp
+
+' ===== Раскладка (невидимые связи)
+' компоненты платформы звонков слева направо
+callUI -[hidden]right- meetBackend
+meetBackend -[hidden]right- sfu
+' пакет адаптеров под платформой звонков
+iMeetApi -[hidden]down- iPluginUiApi
+iWebhooks -[hidden]down- iPluginUiApi
+' все адаптеры в одном ряду с частями UI Adapter
+iPluginUiApi -[hidden]down- callAdapter
+iPluginUiApi -[hidden]down- mediaAdapter
+iPluginUiApi -[hidden]down- eventAdapter
+' пакет Plugin под Plugin Platform
+registry -[hidden]down- iSurfaceApi
+registry -[hidden]down- iControl
+activationStore -[hidden]down- iMediaInput
+@enduml
