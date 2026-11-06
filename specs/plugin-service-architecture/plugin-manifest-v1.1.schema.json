@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Манифест плагина 1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest-version", "plugin-id", "plugin-version", "name", "frontend", "backend"],
+  "properties": {
+    "manifest-version": { "const": "1.1" },
+    "plugin-id": { "$ref": "#/$defs/nonBlankString" },
+    "plugin-version": { "$ref": "#/$defs/nonBlankString" },
+    "name": { "$ref": "#/$defs/nonBlankString" },
+    "description": { "$ref": "#/$defs/nonBlankString" },
+    "frontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url-web"],
+      "properties": {
+        "url-web": { "$ref": "#/$defs/httpsUrl" },
+        "sdk-version": { "$ref": "#/$defs/nonBlankString" }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["health-url", "control-url"],
+      "properties": {
+        "health-url": { "$ref": "#/$defs/httpsUrl" },
+        "control-url": { "$ref": "#/$defs/httpsUrl" },
+        "sdk-version": { "$ref": "#/$defs/nonBlankString" },
+        "initial-state": {
+          "type": "array",
+          "uniqueItems": true,
+          "default": [],
+          "items": { "enum": ["participants"] }
+        },
+        "events": { "$ref": "#/$defs/events" },
+        "media": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input": { "$ref": "#/$defs/mediaTypes" },
+            "output": { "$ref": "#/$defs/mediaTypes" }
+          }
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["keys"],
+          "properties": {
+            "keys": { "$ref": "#/$defs/nonEmptyStringList" },
+            "delivery-report-url": { "$ref": "#/$defs/httpsUrl" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonBlankString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "httpsUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://[^/?#\\s@]+(?:/[^?#\\s]*)?(?:\\?[^#\\s]*)?$"
+    },
+    "nonEmptyStringList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonBlankString" }
+    },
+    "mediaTypes": {
+      "type": "array",
+      "uniqueItems": true,
+      "default": [],
+      "items": { "enum": ["AUDIO", "VIDEO", "SCREEN_SHARE", "SCREEN_SHARE_AUDIO"] }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "available-event-types": { "$ref": "#/$defs/nonEmptyStringList" },
+        "available-event-groups": { "$ref": "#/$defs/nonEmptyStringList" }
+      },
+      "anyOf": [
+        { "required": ["available-event-types"] },
+        { "required": ["available-event-groups"] }
+      ]
+    }
+  }
+}
