@@ -29,7 +29,7 @@ plugin-frontend-sdk/
 ├── README.md
 ├── src/
 │   ├── index.ts          # публичная точка входа
-│   ├── sdk.ts            # createPluginSdk и жизненный цикл SDK
+│   ├── sdk.ts            # init и жизненный цикл SDK
 │   ├── bridge.ts         # request/response через postMessage
 │   ├── messages.ts       # типы сообщений и коды ошибок
 │   ├── types.ts          # LaunchParams и публичные типы
@@ -55,10 +55,10 @@ export interface PluginSdk {
   destroy(): void;
 }
 
-export function createPluginSdk(options: PluginSdkOptions): PluginSdk;
+export function init(options: PluginSdkOptions): PluginSdk;
 ```
 
-### `createPluginSdk(options)`
+### `init(options)`
 
 Создаёт экземпляр SDK. В MVP SDK не принимает и не проверяет origin конфигурации.
 
@@ -138,9 +138,9 @@ SDK не должен автоматически повторять запрос
 ## 7. Пример использования
 
 ```typescript
-import { createPluginSdk } from '@company/plugin-frontend-sdk';
+import { init } from '@company/plugin-frontend-sdk';
 
-const sdk = createPluginSdk({
+const sdk = init({
 });
 
 const params = await sdk.getLaunchParams();
@@ -155,7 +155,7 @@ console.log(params.session.id);
 
 ```typescript
 useEffect(() => {
-  const sdk = createPluginSdk({
+  const sdk = init({
   });
 
   sdk.getLaunchParams()

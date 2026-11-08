@@ -21,6 +21,7 @@ export interface LaunchParams {
   user: {
     id: string;
     displayName: string;
+    photoUrl?: string;
     isGuest: boolean;
   };
   session: {
@@ -35,6 +36,7 @@ export interface LaunchParams {
 | `call.name` | `string` | Да | Room metadata | Отображаемое название звонка/комнаты. |
 | `user.id` | `string` | Да | Серверная сессия пользователя | Идентификатор пользователя платформы. |
 | `user.displayName` | `string` | Да | LiveKit participant name | Имя для отображения. |
+| `user.photoUrl` | `string` | Нет | Серверный профиль пользователя | URL фотографии пользователя. |
 | `user.isGuest` | `boolean` | Да | Серверная сессия пользователя | Признак неавторизованного гостя. |
 | `session.id` | `string` | Да | LiveKit participant identity | Идентификатор конкретного участия. |
 
@@ -60,6 +62,7 @@ export interface LaunchParams {
   "user": {
     "id": "user-789",
     "displayName": "Александр",
+    "photoUrl": "https://cdn.example.com/users/user-789/avatar.jpg",
     "isGuest": false
   },
   "session": {
@@ -92,6 +95,7 @@ return {
     user: {
       id: user.id,
       displayName: user.displayName,
+      ...(user.photoUrl ? { photoUrl: user.photoUrl } : {}),
       isGuest: user.isGuest
     },
     session: { id: sessionId }
@@ -111,7 +115,7 @@ return {
 | `room.metadata` | `call.name` |
 | `participant.identity` | `session.id` |
 | `participant.name` | `user.displayName` |
-| `participant.attributes` | `user.id`, `user.isGuest` |
+| `participant.attributes` | `user.id`, `user.photoUrl`, `user.isGuest` |
 
 Пример metadata комнаты:
 

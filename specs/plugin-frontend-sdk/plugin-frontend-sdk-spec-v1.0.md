@@ -35,6 +35,8 @@ export interface LaunchParams {
     id: string;
     /** Отображаемое имя пользователя. */
     displayName: string;
+    /** Необязательный URL фотографии пользователя. */
+    photoUrl?: string;
     /** true, если пользователь не авторизован в платформе. */
     isGuest: boolean;
   };
@@ -59,6 +61,7 @@ export interface LaunchParams {
   "user": {
     "id": "user-789",
     "displayName": "Александр",
+    "photoUrl": "https://cdn.example.com/users/user-789/avatar.jpg",
     "isGuest": false
   },
   "session": {
@@ -71,7 +74,7 @@ export interface LaunchParams {
 
 Backend, который выдаёт LiveKit Access Token, формирует значения из доверенного серверного контекста:
 
-1. определяет `user.id`, `displayName` и `isGuest` на основании текущей сессии;
+1. определяет `user.id`, `displayName`, необязательный `photoUrl` и `isGuest` на основании текущей сессии;
 2. получает или создаёт единый `call.id`, который используется как LiveKit `room.name`;
 3. определяет `call.name`;
 4. создаёт `session.id` для конкретного участия;
@@ -87,6 +90,7 @@ const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
   name: user.displayName,
   attributes: {
     'app.userId': user.id,
+    ...(user.photoUrl ? { 'app.photoUrl': user.photoUrl } : {}),
     'app.isGuest': String(user.isGuest)
   }
 });
@@ -127,6 +131,7 @@ function getLaunchParams(room: Room): LaunchParams {
   };
 
   const userId = participant.attributes['app.userId'];
+  const photoUrl = participant.attributes['app.photoUrl'];
   const guestFlag = participant.attributes['app.isGuest'];
 
   if (
@@ -144,6 +149,7 @@ function getLaunchParams(room: Room): LaunchParams {
     user: {
       id: userId,
       displayName: participant.name ?? '',
+      ...(photoUrl ? { photoUrl } : {}),
       isGuest: guestFlag === 'true'
     },
     session: { id: participant.identity }
@@ -228,7 +234,7 @@ export interface PluginSdk {
   getLaunchParams(): Promise<LaunchParams>;
 }
 
-export function createPluginSdk(options: {
+export function init(options: {
   timeoutMs?: number;
 }): PluginSdk;
 ```
@@ -236,9 +242,9 @@ export function createPluginSdk(options: {
 ## 8. Пример чтения параметров в плагине
 
 ```typescript
-import { createPluginSdk } from '@company/plugin-frontend-sdk';
+import { init } from '@company/plugin-frontend-sdk';
 
-const sdk = createPluginSdk({
+const sdk = init({
   timeoutMs: 5000
 });
 

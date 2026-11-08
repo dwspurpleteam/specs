@@ -24,6 +24,7 @@ interface CallParticipantContext {
   callName: string;
   userId: string;
   displayName: string;
+  photoUrl?: string;
   isGuest: boolean;
   sessionId: string;
 }
@@ -46,6 +47,7 @@ const token = new AccessToken(API_KEY, API_SECRET, {
   name: context.displayName,
   attributes: {
     'app.userId': context.userId,
+    ...(context.photoUrl ? { 'app.photoUrl': context.photoUrl } : {}),
     'app.isGuest': String(context.isGuest)
   }
 });
@@ -173,7 +175,7 @@ interface PluginRegistration {
 
 - прокидывание server-generated `identity` в LiveKit participant identity;
 - прокидывание имени в participant name;
-- прокидывание `userId` и `isGuest` в participant attributes;
+- прокидывание `userId`, необязательного `photoUrl` и `isGuest` в participant attributes;
 - доступ Host Frontend к room metadata после подключения;
 - установку room metadata до подключения участников;
 - сохранение связи между OpenVidu call id и LiveKit room id.
