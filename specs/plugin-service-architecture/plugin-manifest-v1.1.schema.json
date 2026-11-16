@@ -81,8 +81,37 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "available-event-types": { "$ref": "#/$defs/nonEmptyStringList" },
-        "available-event-groups": { "$ref": "#/$defs/nonEmptyStringList" }
+        "available-event-types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "participant.joined",
+              "participant.left",
+              "participant.connection_aborted",
+              "participant.reconnecting",
+              "participant.reconnected",
+              "participant.kicked",
+              "media.audio_muted",
+              "media.audio_unmuted",
+              "media.video_enabled",
+              "media.video_disabled",
+              "media.screen_share_started",
+              "media.screen_share_stopped",
+              "media.track_published",
+              "media.track_unpublished",
+              "interaction.chat_message_received",
+              "call.ended"
+            ]
+          }
+        },
+        "available-event-groups": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["participant", "media", "interaction", "call"] }
+        }
       },
       "anyOf": [
         { "required": ["available-event-types"] },
