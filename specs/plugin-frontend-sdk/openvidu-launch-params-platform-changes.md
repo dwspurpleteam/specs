@@ -2,21 +2,23 @@
 
 ## 1. Цель
 
-Платформа должна передавать контекст звонка в Host Frontend при подключении к OpenVidu/LiveKit, чтобы затем Host передал его plugin UI без дополнительного запроса при открытии iframe.
+Платформа должна передавать контекст звонка в Host при подключении к OpenVidu/LiveKit, чтобы затем Host передал его plugin UI без дополнительного запроса при открытии iframe.
 
 ## 2. Компоненты
 
 | Компонент | Изменение |
 |---|---|
-| Call/Session Backend | Формировать единый объект `call` и `user.*`, `session.id`; `call.id` равен идентификатору комнаты. |
+| Backend платформы | Формировать единый объект `call` и `user.*`, `session.id`, выдавать LiveKit Access Token; `call.id` равен идентификатору комнаты. |
+| Backend плагина | Серверная часть конкретного плагина, реализующая его бизнес-логику и при необходимости принимающая запросы frontend-плагина после собственной проверки авторизации. |
+| LiveKit Server | Инфраструктурный компонент видеоконференций, обслуживающий комнаты и подключения; не является Backend платформы. |
 | Token service | Передавать `session.id`, имя и атрибуты пользователя в LiveKit Access Token. |
 | Room provisioning | Создавать комнату и записывать metadata до подключения клиента. |
-| Host Frontend | Собирать LaunchParams после подключения и хранить их в состоянии звонка. |
+| Host | Frontend приложения видеоконференций, внутри которого открыт iframe плагина; собирает LaunchParams после подключения и хранит их в состоянии звонка. В документе `Host` и `Host Frontend` — синонимы. |
 | Plugin host integration | Обрабатывать `postMessage` и отвечать plugin iframe. Проверка origin не выполняется. |
 | Plugin registry | Хранить URL и plugin id без требований к whitelist origin. |
 | Tests/observability | Добавить контрактные тесты, логи ошибок и метрики готовности контекста. |
 
-## 3. Backend: модель участия
+## 3. Backend платформы: модель участия
 
 ```typescript
 interface CallParticipantContext {
@@ -33,13 +35,13 @@ interface CallParticipantContext {
 Правила:
 
 - `userId`, `displayName` и `isGuest` определяются сервером, а не принимаются из недоверенных полей клиента;
-- `sessionId` создаётся backend для нового участия;
+- `sessionId` создаётся Backend платформы для нового участия;
 - `sessionId` переиспользуется только при восстановлении того же участия;
 - разные устройства одного пользователя получают разные `sessionId`;
 - `callId` стабилен для одного звонка и одновременно является `room.name` в LiveKit.
 - `call` является единым источником информации о звонке для LaunchParams.
 
-## 4. Backend: LiveKit Access Token
+## 4. Backend платформы: LiveKit Access Token
 
 ```typescript
 const token = new AccessToken(API_KEY, API_SECRET, {
@@ -100,7 +102,7 @@ interface JoinCallResponseWithContext extends JoinCallResponse {
 
 Это не является отдельным запросом при открытии плагина. Значения должны формироваться сервером.
 
-## 7. Host Frontend: сбор и хранение
+## 7. Host: сбор и хранение
 
 После `room.connect()` Host должен:
 
@@ -120,7 +122,7 @@ callStore.setLaunchParams(launchParams);
 
 Состояние должно быть привязано к текущему подключению, чтобы контекст предыдущего звонка не попал в новый iframe.
 
-## 8. Host Frontend: bridge с iframe
+## 8. Host: bridge с iframe
 
 ```typescript
 window.addEventListener('message', (event) => {
@@ -155,7 +157,7 @@ window.addEventListener('message', (event) => {
 });
 ```
 
-Проверка `event.origin` и `event.source` в MVP не выполняется. Ответ отправляется с `targetOrigin: '*'`.
+Проверка `event.origin` и `event.source` в текущем контракте не выполняется. Ответ отправляется с `targetOrigin: '*'`.
 
 ## 9. Реестр плагинов и домены
 
@@ -176,13 +178,13 @@ interface PluginRegistration {
 - прокидывание server-generated `identity` в LiveKit participant identity;
 - прокидывание имени в participant name;
 - прокидывание `userId`, необязательного `photoUrl` и `isGuest` в participant attributes;
-- доступ Host Frontend к room metadata после подключения;
+- доступ Host к room metadata после подключения;
 - установку room metadata до подключения участников;
 - сохранение связи между OpenVidu call id и LiveKit room id.
 
 Если текущая версия OpenVidu не предоставляет нужные значения в клиентском API, расширяется адаптер событий подключения или endpoint выдачи токена. SDK плагина не должен обращаться к внутренним OpenVidu API.
 
-## 11. Безопасность MVP
+## 11. Ограничения безопасности текущего контракта
 
 Даже без подписей необходимо:
 
@@ -190,7 +192,7 @@ interface PluginRegistration {
 - не принимать идентификаторы пользователя от plugin UI;
 - учитывать, что данные передаются в iframe без проверки origin;
 - разрешать plugin UI выполнять сетевые запросы без ограничений со стороны SDK;
-- считать LaunchParams контекстом UI, а не основанием для доверенных backend-операций;
+- считать LaunchParams контекстом UI, а не основанием для доверенных операций Backend плагина;
 - для защищённых операций использовать отдельную серверную авторизацию платформы.
 
 ## 12. Наблюдаемость
@@ -209,7 +211,7 @@ interface PluginRegistration {
 ## 13. План реализации
 
 1. Зафиксировать тип `LaunchParams` и сообщения в общем контрактном пакете.
-2. Доработать backend выдачи OpenVidu/LiveKit token.
+2. Доработать Backend платформы для выдачи OpenVidu/LiveKit token.
 3. Добавить создание и metadata комнаты.
 4. Доработать Host Frontend: сбор, хранение и очистку контекста.
 5. Реализовать bridge для iframe без проверки origin.
@@ -225,4 +227,4 @@ interface PluginRegistration {
 - Плагин получает параметры через `postMessage` без проверки origin.
 - Host отвечает iframe без проверки origin.
 - При неполном контексте плагин получает явную ошибку.
-- В платформе не требуется подпись LaunchParams для MVP.
+- В текущем контракте не требуется подпись LaunchParams.
